@@ -1,0 +1,127 @@
+import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+
+import type { ModelInfo } from "@roo-code/types"
+
+import { formatPrice } from "@src/utils/formatPrice"
+import { cn } from "@src/lib/utils"
+import { useAppTranslation } from "@src/i18n/TranslationContext"
+
+import { ModelDescriptionMarkdown } from "./ModelDescriptionMarkdown"
+
+type ModelInfoViewProps = {
+	apiProvider?: string
+	selectedModelId: string
+	modelInfo?: ModelInfo
+	isDescriptionExpanded: boolean
+	setIsDescriptionExpanded: (isExpanded: boolean) => void
+}
+
+export const ModelInfoView = ({
+	apiProvider,
+	selectedModelId,
+	modelInfo,
+	isDescriptionExpanded,
+	setIsDescriptionExpanded,
+}: ModelInfoViewProps) => {
+	const { t } = useAppTranslation()
+
+	const infoItems = [
+		typeof modelInfo?.contextWindow === "number" && modelInfo.contextWindow > 0 && (
+			<>
+				<span className="font-medium">{t("settings:modelInfo.contextWindow")}</span>{" "}
+				{modelInfo.contextWindow?.toLocaleString()} tokens
+			</>
+		),
+		typeof modelInfo?.maxTokens === "number" && modelInfo.maxTokens > 0 && (
+			<>
+				<span className="font-medium">{t("settings:modelInfo.maxOutput")}:</span>{" "}
+				{modelInfo.maxTokens?.toLocaleString()} tokens
+			</>
+		),
+		<ModelInfoSupportsItem
+			isSupported={modelInfo?.supportsImages ?? false}
+			supportsLabel={t("settings:modelInfo.supportsImages")}
+			doesNotSupportLabel={t("settings:modelInfo.noImages")}
+		/>,
+		/* kilocode_change: supports computer use => supports browser
+		<ModelInfoSupportsItem
+			isSupported={modelInfo?.supportsComputerUse ?? false}
+			supportsLabel={t("settings:modelInfo.supportsComputerUse")}
+			doesNotSupportLabel={t("settings:modelInfo.noComputerUse")}
+		/>,*/
+		<ModelInfoSupportsItem
+			isSupported={modelInfo?.supportsPromptCache ?? false}
+			supportsLabel={t("settings:modelInfo.supportsPromptCache")}
+			doesNotSupportLabel={t("settings:modelInfo.noPromptCache")}
+		/>,
+		modelInfo?.inputPrice !== undefined && modelInfo.inputPrice > 0 && (
+			<>
+				<span className="font-medium">{t("settings:modelInfo.inputPrice")}:</span>{" "}
+				{formatPrice(modelInfo.inputPrice)} / 1M tokens
+			</>
+		),
+		modelInfo?.outputPrice !== undefined && modelInfo.outputPrice > 0 && (
+			<>
+				<span className="font-medium">{t("settings:modelInfo.outputPrice")}:</span>{" "}
+				{formatPrice(modelInfo.outputPrice)} / 1M tokens
+			</>
+		),
+		modelInfo?.supportsPromptCache && modelInfo.cacheReadsPrice && (
+			<>
+				<span className="font-medium">{t("settings:modelInfo.cacheReadsPrice")}:</span>{" "}
+				{formatPrice(modelInfo.cacheReadsPrice || 0)} / 1M tokens
+			</>
+		),
+		modelInfo?.supportsPromptCache && modelInfo.cacheWritesPrice && (
+			<>
+				<span className="font-medium">{t("settings:modelInfo.cacheWritesPrice")}:</span>{" "}
+				{formatPrice(modelInfo.cacheWritesPrice || 0)} / 1M tokens
+			</>
+		),
+		apiProvider === "gemini" && (
+			<span className="italic">
+				{selectedModelId.includes("pro-preview")
+					? t("settings:modelInfo.gemini.billingEstimate")
+					: t("settings:modelInfo.gemini.freeRequests", {
+							count: selectedModelId && selectedModelId.includes("flash") ? 15 : 2,
+						})}{" "}
+				<VSCodeLink href="https://ai.google.dev/pricing" className="text-sm">
+					{t("settings:modelInfo.gemini.pricingDetails")}
+				</VSCodeLink>
+			</span>
+		),
+	].filter(Boolean)
+
+	return (
+		<>
+			{modelInfo?.description && (
+				<ModelDescriptionMarkdown
+					key="description"
+					markdown={modelInfo.description}
+					isExpanded={isDescriptionExpanded}
+					setIsExpanded={setIsDescriptionExpanded}
+				/>
+			)}
+			<div className="text-sm text-vscode-descriptionForeground">
+				{infoItems.map((item, index) => (
+					<div key={index}>{item}</div>
+				))}
+			</div>
+		</>
+	)
+}
+
+export /*kilocode_change*/ const ModelInfoSupportsItem = ({
+	isSupported,
+	supportsLabel,
+	doesNotSupportLabel,
+}: {
+	isSupported: boolean
+	supportsLabel: string
+	doesNotSupportLabel: string
+}) => (
+	<div className="flex items-center gap-1 font-medium">
+		<span className={cn("codicon", isSupported ? "codicon-check" : "codicon-x")} />
+		{isSupported ? supportsLabel : doesNotSupportLabel}
+	</div>
+)
